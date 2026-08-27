@@ -1,0 +1,85 @@
+# ============================== Filebeat inputs ===============================
+
+filebeat.inputs:
+
+  # ============================ CLIENTS INPUT ============================
+  - type: filestream
+    id: defender-software-clients
+    enabled: true
+    paths:
+      - C:\Scripts\Software-Inventory\JSON-Files\Clients\*.json
+
+    fields:
+      TargetStream: "logs-defender.clients-default"
+    fields_under_root: true
+
+    parsers:
+      - ndjson:
+          target: ""
+          add_error_key: true
+          overwrite_keys: true
+
+  # ============================ SERVERS INPUT ============================
+  - type: filestream
+    id: defender-software-servers
+    enabled: true
+    paths:
+      - C:\Scripts\Software-Inventory\JSON-Files\Servers\*.json
+
+    fields:
+      TargetStream: "logs-defender.servers-default"
+    fields_under_root: true
+
+    parsers:
+      - ndjson:
+          target: ""
+          add_error_key: true
+          overwrite_keys: true
+
+# ============================== Filebeat modules ==============================
+
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: false
+
+# ================================== General ===================================
+
+name: Software-Inventory
+
+# =================================== Kibana ===================================
+
+setup.kibana:
+  host: "http://elasticsearch.f0gge.local:5601"
+  space.id: default
+
+# ======================= Elasticsearch template setting =======================
+
+setup.template.enabled: false
+
+# ================================== Outputs ===================================
+
+output.elasticsearch:
+  hosts: ["https://elasticsearch.f0gge.local:9200"]
+  preset: balanced
+ 
+ # OPTION A: Username and Password Authentication
+  username: "INSERT_USER_HERE"
+  password: "INSERT_PASSWORD_HERE"
+
+  # OPTION B: API Key Authentication (Format: "id:api_key")
+  # Uncomment the line below and comment out username/password if using an API Key instead
+  # api_key: "id:API_KEY_STRING_HERE"
+
+  # Explicitly route events based on the TargetStream field injected in the inputs
+  indices:
+    - index: "logs-defender.clients-default"
+      when.equals:
+        TargetStream: "logs-defender.clients-default"
+    - index: "logs-defender.servers-default"
+      when.equals:
+        TargetStream: "logs-defender.servers-default"
+
+# ================================= Processors =================================
+
+processors:
+  - add_host_metadata: ~
