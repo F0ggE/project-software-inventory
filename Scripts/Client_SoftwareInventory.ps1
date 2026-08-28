@@ -76,9 +76,11 @@ try {
                     $primaryUser = $device.userPrincipalName
                 }
 
-                # Store result in lookup table
+                # Store result in lookup table with "Unassigned" fallback
                 if ($primaryUser) {
                     $IntuneLookup[$cleanName] = $primaryUser
+                } else {
+                    $IntuneLookup[$cleanName] = "Unassigned"
                 }
             }
         }
@@ -147,7 +149,7 @@ if ($Results) {
 
     $ndjson = foreach ($item in $Results) {
         # Normalize the Defender DeviceName to match the Intune lookup format
-        $matchedUser = $null
+        $matchedUser = "Unassigned"
         if ($item.DeviceName) {
             $cleanDefenderName = $item.DeviceName.Split('.')[0].ToUpper()
             if ($IntuneLookup.ContainsKey($cleanDefenderName)) {
@@ -155,13 +157,19 @@ if ($Results) {
             }
         }
 
-        # Add or update the PrimaryUser property directly on the PSCustomObject/hashtable item
+        # Add or update the PrimaryUser property directly on the object
         $item | Add-Member -MemberType NoteProperty -Name "PrimaryUser" -Value $matchedUser -Force
 
         # Convert back to compressed single-line JSON string
         $item | ConvertTo-Json -Compress -Depth 5
     }
 
+    $ndjson | Out-File -FilePath $OutputFile -Encoding utf8
+    
+    Write-Host "      Export Complete! Saved clean NDJSON to: $OutputFile" -ForegroundColor Green
+} else {
+    Write-Host "[4/4] No client software records returned." -ForegroundColor Gray
+}
     $ndjson | Out-File -FilePath $OutputFile -Encoding utf8
     
     Write-Host "      Export Complete! Saved clean NDJSON to: $OutputFile" -ForegroundColor Green
